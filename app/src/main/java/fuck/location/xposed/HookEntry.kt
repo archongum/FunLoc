@@ -2,8 +2,9 @@ package fuck.location.xposed
 
 import android.annotation.SuppressLint
 import android.os.Build
-import com.github.kyuubiran.ezxhelper.init.EzXHelperInit
-import com.github.kyuubiran.ezxhelper.utils.*
+import com.github.kyuubiran.ezxhelper.EzXHelper
+import com.github.kyuubiran.ezxhelper.HookFactory.`-Static`.createHook
+import com.github.kyuubiran.ezxhelper.finders.MethodFinder
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XposedBridge
@@ -31,7 +32,7 @@ import java.lang.Exception
 class HookEntry : IXposedHookZygoteInit, IXposedHookLoadPackage {
 
     override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
-        EzXHelperInit.initZygote(startupParam)
+        EzXHelper.initZygote(startupParam)
 
         XposedBridge.log("FL: in initZygote!")
     }
@@ -44,20 +45,22 @@ class HookEntry : IXposedHookZygoteInit, IXposedHookLoadPackage {
                     XposedBridge.log("FL: Try to hook the module")
                     val clazz = lpparam.classLoader.loadClass("fuck.location.app.ui.activities.MainActivity")
 
-                    findAllMethods(clazz) {
-                        name == "isModuleActivated" && isPublic
-                    }.hookMethod {
-                        after { param ->
-                            XposedBridge.log("FL: Unlock the module")
-                            param.result = true
-                        }
+                    MethodFinder.fromClass(clazz)
+                        .filterByName("isModuleActivated")
+                        .filterPublic()
+                        .first()
+                        .createHook {
+                            after { param ->
+                                XposedBridge.log("FL: Unlock the module")
+                                param.result = true
+                            }
                     }
                 }
 
                 "android" -> {
-                    EzXHelperInit.initHandleLoadPackage(lpparam)
-                    EzXHelperInit.setLogTag("FuckLocation Xposed")
-                    EzXHelperInit.setToastTag("FL")
+                    EzXHelper.initHandleLoadPackage(lpparam)
+                    EzXHelper.setLogTag("FuckLocation Xposed")
+                    EzXHelper.setToastTag("FL")
 
                     XposedBridge.log("FL: Finding method")
 

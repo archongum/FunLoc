@@ -31,6 +31,7 @@
     <string name="custom_view_textview_tac" translatable="false">Tac</string>
     <string name="custom_view_textview_arfcn" translatable="false">Earfcn / nrArfcn</string>
     <string name="custom_view_textview_bandwidth">Bandwidth</string>
+    <string name="custom_view_textview_mnc">Mnc</string>
 
     <string name="about_slogan">About this module</string>
     <string name="about_introduction_title">Tips and help</string>

@@ -45,10 +45,12 @@ class Nr {
                 ConfigGateway.get().readFakeLocation().pci,
                 ConfigGateway.get().readFakeLocation().tac,
                 ConfigGateway.get().readFakeLocation().earfcn,
+//                intArrayOf(ConfigGateway.get().readFakeLocation().bandwidth),
                 cellIdentityNr.bands,
                 cellIdentityNr.mccString,
+//                ConfigGateway.get().readFakeLocation().mnc,
                 cellIdentityNr.mncString,
-                ConfigGateway.get().readFakeLocation().eci.toLong(),
+                ConfigGateway.get().readFakeLocation().eci,
                 cellIdentityNr.operatorAlphaLong,
                 cellIdentityNr.operatorAlphaShort,
                 cellIdentityNr.additionalPlmns
@@ -59,8 +61,9 @@ class Nr {
                 ConfigGateway.get().readFakeLocation().tac,
                 ConfigGateway.get().readFakeLocation().earfcn,
                 cellIdentityNr.mccString,
+//                ConfigGateway.get().readFakeLocation().mnc,
                 cellIdentityNr.mncString,
-                ConfigGateway.get().readFakeLocation().eci.toLong(),
+                ConfigGateway.get().readFakeLocation().eci,
                 cellIdentityNr.operatorAlphaLong,
                 cellIdentityNr.operatorAlphaShort
             )

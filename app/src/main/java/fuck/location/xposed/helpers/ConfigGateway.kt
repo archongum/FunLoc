@@ -5,7 +5,9 @@ import android.app.ActivityManager
 import android.app.AndroidAppHelper
 import android.content.Context
 import android.os.Build
-import com.github.kyuubiran.ezxhelper.utils.*
+import com.github.kyuubiran.ezxhelper.HookFactory.`-Static`.createHook
+import com.github.kyuubiran.ezxhelper.Log
+import com.github.kyuubiran.ezxhelper.finders.MethodFinder
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Moshi
@@ -70,30 +72,35 @@ class ConfigGateway private constructor() {
         val clazz = lpparam.classLoader.loadClass("com.android.server.am.ActivityManagerService")
 
         XposedBridge.log("FL: [debug !!] Finding method")
-        findAllMethods(clazz) {
-            name == "setProcessMemoryTrimLevel" && isPublic
-        }.hookMethod {
-            before { param ->
-                if (param.args[1] == magicNumber) {
-                    when {  // Check what this call intend to do
-                        param.args[2] == 0 -> {
-                            inWhitelistOrNot(param)
-                        }
-                        param.args[2] == 1 -> {
-                            writePackageListInternal(param)
-                        }
-                        param.args[2] == 3 -> {
-                            writeFakeLocationInternal(param)
+        MethodFinder.fromClass(clazz)
+            .filterByName("setProcessMemoryTrimLevel")
+            .filterPublic()
+            .forEach { method ->
+                method.createHook {
+                    before { param ->
+                        if (param.args[1] == magicNumber) {
+                            when {  // Check what this call intend to do
+                                param.args[2] == 0 -> {
+                                    inWhitelistOrNot(param)
+                                }
+
+                                param.args[2] == 1 -> {
+                                    writePackageListInternal(param)
+                                }
+
+                                param.args[2] == 3 -> {
+                                    writeFakeLocationInternal(param)
+                                    return@before
+                                }
+                            }
+
                             return@before
+                        } else {
+                            XposedBridge.log("FL: [debug !!] Not with magic number, do nothing.")
                         }
                     }
-
-                    return@before
-                } else {
-                    XposedBridge.log("FL: [debug !!] Not with magic number, do nothing.")
                 }
             }
-        }
     }
 
     @SuppressLint("PrivateApi")
@@ -103,56 +110,69 @@ class ConfigGateway private constructor() {
         val clazz1 = lpparam.classLoader.loadClass("android.app.ApplicationPackageManager")
         val clazz2 = lpparam.classLoader.loadClass("com.android.server.pm.ComputerEngine")
 
-
         XposedBridge.log("FL: [debug !!] Finding method in getInstallerPackageName")
-        findAllMethods(clazz) {
-            name == "getInstallerPackageName"
-        }.hookMethod {
-            before { param ->
-                when {
-                    param.args[0] == magicNumber.toString() -> {
-                        readPackageListInternal(param)
-                    }
-                    param.args[0] == magicNumberLocation.toString() -> {
-                        readFakeLocationInternal(param)
+        XposedBridge.log("FL: [debug !!] Finding method ${clazz.name}")
+        XposedBridge.log("FL: [debug !!] Finding method ${clazz1.name}")
+
+        MethodFinder.fromClass(clazz)
+            .filterByName("getInstallerPackageName")
+            .forEach { method ->
+                method.createHook {
+                    before { param ->
+                        when {
+                            param.args[0] == magicNumber.toString() -> {
+                                readPackageListInternal(param)
+                            }
+
+                            param.args[0] == magicNumberLocation.toString() -> {
+                                readFakeLocationInternal(param)
+                                return@before
+                            }
+                        }
                         return@before
                     }
                 }
-                return@before
             }
-        }
-        findAllMethods(clazz1) {
-            name == "getInstallerPackageName"
-        }.hookMethod {
-            before { param ->
-                when {
-                    param.args[0] == magicNumber.toString() -> {
-                        readPackageListInternal(param)
-                    }
-                    param.args[0] == magicNumberLocation.toString() -> {
-                        readFakeLocationInternal(param)
+
+        MethodFinder.fromClass(clazz1)
+            .filterByName("getInstallerPackageName")
+            .forEach { method ->
+                method.createHook {
+                    before { param ->
+                        when {
+                            param.args[0] == magicNumber.toString() -> {
+                                readPackageListInternal(param)
+                            }
+
+                            param.args[0] == magicNumberLocation.toString() -> {
+                                readFakeLocationInternal(param)
+                                return@before
+                            }
+                        }
                         return@before
                     }
                 }
-                return@before
             }
-        }
-        findAllMethods(clazz2) {
-            name == "getInstallerPackageName"
-        }.hookMethod {
-            before { param ->
-                when {
-                    param.args[0] == magicNumber.toString() -> {
-                        readPackageListInternal(param)
-                    }
-                    param.args[0] == magicNumberLocation.toString() -> {
-                        readFakeLocationInternal(param)
+
+        MethodFinder.fromClass(clazz2)
+            .filterByName("getInstallerPackageName")
+            .forEach { method ->
+                method.createHook {
+                    before { param ->
+                        when {
+                            param.args[0] == magicNumber.toString() -> {
+                                readPackageListInternal(param)
+                            }
+
+                            param.args[0] == magicNumberLocation.toString() -> {
+                                readFakeLocationInternal(param)
+                                return@before
+                            }
+                        }
                         return@before
                     }
                 }
-                return@before
             }
-        }
     }
 
     @ExperimentalStdlibApi
@@ -221,7 +241,7 @@ class ConfigGateway private constructor() {
                     jsonFile.readText()
                 } catch (e: FileNotFoundException) {
                     XposedBridge.log("FL: not possible to refresh. Fallback to {\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0} ${e.stackTraceToString()}")
-                    "{\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0}"
+                    "{\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0, \"mnc\":\"11\"}"
                 }
             }
 
@@ -229,7 +249,8 @@ class ConfigGateway private constructor() {
         } catch (e: Exception) {
             XposedBridge.log("FL: [debug !!] Fuck with exceptions! ${e.stackTraceToString()}")
 
-            param.result = "{\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0}"
+            param.result =
+                "{\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0, \"mnc\":\"11\"}"
         }
     }
 
@@ -277,11 +298,13 @@ class ConfigGateway private constructor() {
                 packageManager,
                 "getInstallerPackageName", magicNumber.toString()
             )
+
             4 -> HiddenApiBypass.invoke(
                 packageManager.javaClass,
                 packageManager,
                 "getInstallerPackageName", magicNumberLocation.toString()
             )
+
             else -> HiddenApiBypass.invoke(
                 activityManager.javaClass,
                 activityManager,
@@ -300,28 +323,12 @@ class ConfigGateway private constructor() {
     fun readPackageList(): List<String>? {
         val jsonAdapter: JsonAdapter<List<String>> = moshi.adapter()
 //        var jsonFile = File("${customContext.get()?.filesDir}/whiteList.json")
-        val json: String
-//        if (jsonFile.exists()) {
-//            json = try {
-//                jsonFile.readText()
-//            } catch (e: FileNotFoundException) {
-//                Log.d("FL: whiteList.json not found. Trying to refresh File holder")
-//                try {
-//                    jsonFile = File("${customContext.get()?.filesDir}/whiteList.json")
-//                    jsonFile.readText()
-//                    Log.d("FL: whiteList.json resumed.")
-//                } catch (e: FileNotFoundException) {
-//                    Log.d("FL: not possible to refresh. Fallback to []")
-//                }
-//                "[]"
-//            }
-//        } else {
-            json = try {
-                universalAPICaller("None", 2) as String
-            } catch (e: Exception) {
-                Log.d("FL: Failed to read package list. Fallback to []")
-                "[]"
-            }
+        val json: String = try {
+            universalAPICaller("None", 2) as String
+        } catch (e: Exception) {
+            Log.d("FL: Failed to read package list. Fallback to []")
+            "[]"
+        }
 //        }
 
         return jsonAdapter.fromJson(json)
@@ -342,15 +349,16 @@ class ConfigGateway private constructor() {
                     jsonFile.readText()
                     Log.d("FL: fakeLocation.json resumed.")
                 } catch (e: FileNotFoundException) {
-                    Log.d("FL: not possible to refresh. Fallback to {\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0}")
+                    Log.d("FL: not possible to refresh. Fallback to {\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0, \"mnc\":\"11\"}")
                 }
-                "{\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0}"
+                "{\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0, \"mnc\":\"11\"}"
             }
         } else {
-            json = "{\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0}"
+            json =
+                "{\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0, \"mnc\":\"11\"}"
         }
 
-        lateinit var jsonAdapterResult : FakeLocation
+        lateinit var jsonAdapterResult: FakeLocation
 
         // Migrate from older config
         try {
@@ -368,6 +376,7 @@ class ConfigGateway private constructor() {
                 0,
                 0,
                 0,
+                "11"
             )
 
             jsonAdapterResult = modernFakeLocation
@@ -380,31 +389,15 @@ class ConfigGateway private constructor() {
     fun readFakeLocation(): FakeLocation {
         val jsonAdapter: JsonAdapter<FakeLocation> = moshi.adapter()
 //        var jsonFile = File("$dataDir/fakeLocation.json")
-        val json: String
-//        if (jsonFile.exists()) {
-//            json = try {
-//                jsonFile.readText()
-//            } catch (e: FileNotFoundException) {
-//                Log.d("FL: fakeLocation.json not found. Trying to refresh File holder")
-//                try {
-//                    jsonFile = File("$dataDir/fakeLocation.json")
-//                    jsonFile.readText()
-//                    XposedBridge.log("FL: fakeLocation.json resumed. $e")
-//                } catch (e: FileNotFoundException) {
-//                    XposedBridge.log("FL: not possible to refresh. Fallback to {\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0} $e")
-//                }
-//                "{\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0}"
-//            }
-//        } else {
-            json = try {
-                universalAPICaller("None", 4) as String
-            } catch (e: Exception) {
-                XposedBridge.log("FL: Failed to read fake location. Fallback to {\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0} ${e.stackTraceToString()}")
-                "{\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0}"
-            }
+        val json: String = try {
+            universalAPICaller("None", 4) as String
+        } catch (e: Exception) {
+            XposedBridge.log("FL: Failed to read fake location. Fallback to {\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0, \"mnc\":\"11\"} ${e.stackTraceToString()}")
+            "{\"x\":0.0, \"y\":0.0, \"eci\":0, \"pci\":0, \"tac\":0, \"earfcn\":0, \"bandwidth\":0, \"mnc\":\"11\"}"
+        }
 //        }
 
-        lateinit var jsonAdapterResult : FakeLocation
+        lateinit var jsonAdapterResult: FakeLocation
 
         // Migrate from older config
         try {
@@ -422,6 +415,7 @@ class ConfigGateway private constructor() {
                 0,
                 0,
                 0,
+                "11"
             )
 
             jsonAdapterResult = modernFakeLocation
@@ -450,8 +444,18 @@ class ConfigGateway private constructor() {
     }
 
     @ExperimentalStdlibApi
-    fun writeFakeLocation(x: Double, y: Double, offset: Double, eci: Long, pci: Int, tac: Int, earfcn: Int, bandwidth: Int) {
-        val newFakeLocation = FakeLocation(x, y, offset, eci, pci, tac, earfcn, bandwidth)
+    fun writeFakeLocation(
+        x: Double,
+        y: Double,
+        offset: Double,
+        eci: Long,
+        pci: Int,
+        tac: Int,
+        earfcn: Int,
+        bandwidth: Int,
+        mnc: String
+    ) {
+        val newFakeLocation = FakeLocation(x, y, offset, eci, pci, tac, earfcn, bandwidth, mnc)
         val jsonAdapter: JsonAdapter<FakeLocation> = moshi.adapter()
 
         val json: String = jsonAdapter.toJson(newFakeLocation)
@@ -499,7 +503,7 @@ class ConfigGateway private constructor() {
         throw IllegalArgumentException("FL: Invalid CallerIdentity! This should never happen, please report to developer. $callerIdentity")
     }
 
-    fun setDataPath(){
+    fun setDataPath() {
         File("/data/system").list()?.forEach {  // Try to find the existing config
             if (it.equals("fuck_location_test")) {  // Migrate from older version
                 val randomizedPath = "/data/system/fuck_location_${generateRandomAppendix()}"
@@ -516,7 +520,7 @@ class ConfigGateway private constructor() {
         XposedBridge.log("FL: Config path $dataDir")
     }
 
-    private fun generateRandomAppendix() : String {
+    private fun generateRandomAppendix(): String {
         val chars = ('a'..'Z') + ('A'..'Z') + ('0'..'9')
         return List(16) { chars.random() }.joinToString("")
     }

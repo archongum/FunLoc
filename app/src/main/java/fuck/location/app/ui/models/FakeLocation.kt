@@ -9,7 +9,8 @@ class FakeLocation(
     val pci: Int,
     val tac: Int,
     val earfcn: Int,
-    val bandwidth: Int
+    val bandwidth: Int,
+    val mnc: String
 )
 
 // Used for migrate from older version

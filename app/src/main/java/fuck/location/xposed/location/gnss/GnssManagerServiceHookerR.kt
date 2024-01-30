@@ -1,9 +1,8 @@
 package fuck.location.xposed.location.gnss
 
 import android.annotation.SuppressLint
-import com.github.kyuubiran.ezxhelper.utils.findAllMethods
-import com.github.kyuubiran.ezxhelper.utils.hookBefore
-import com.github.kyuubiran.ezxhelper.utils.isPublic
+import com.github.kyuubiran.ezxhelper.HookFactory.`-Static`.createHook
+import com.github.kyuubiran.ezxhelper.finders.MethodFinder
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import fuck.location.xposed.helpers.ConfigGateway
@@ -14,69 +13,94 @@ class GnssManagerServiceHookerR {
         val clazz =
             lpparam.classLoader.loadClass("com.android.server.location.gnss.GnssManagerService")
 
-        findAllMethods(clazz) {
-            name == "addGnssBatchingCallback" && isPublic
-        }.hookBefore { param ->
-            val packageName = param.args[1] as String
+        MethodFinder.fromClass(clazz)
+            .filterByName("addGnssBatchingCallback")
+            .filterPublic()
+            .forEach { method ->
+                method.createHook {
+                    before { param ->
+                        val packageName = param.args[1] as String
 //            XposedBridge.log("FL: in addGnssBatchingCallback (R)! Caller package name: $packageName")
 
-            if (ConfigGateway.get().inWhitelist(packageName)) {
-                XposedBridge.log("FL: in whiteList! Dropping register request...")
-                param.result = false
-                return@hookBefore
+                        if (ConfigGateway.get().inWhitelist(packageName)) {
+                            XposedBridge.log("FL: in whiteList! Dropping register request...")
+                            param.result = false
+                            return@before
+                        }
+                    }
+                }
             }
-        }
 
-        findAllMethods(clazz) {
-            name == "registerGnssStatusCallback" && isPublic
-        }.hookBefore { param ->
-            val packageName = param.args[1] as String
+        MethodFinder.fromClass(clazz)
+            .filterByName("registerGnssStatusCallback")
+            .filterPublic()
+            .forEach { method ->
+                method.createHook {
+                    before { param ->
+                        val packageName = param.args[1] as String
 //            XposedBridge.log("FL: in registerGnssStatusCallback (R)! Caller package name: $packageName")
 
-            if (ConfigGateway.get().inWhitelist(packageName)) {
-                XposedBridge.log("FL: in whiteList! Dropping register request...")
-                param.result = false
-                return@hookBefore
+                        if (ConfigGateway.get().inWhitelist(packageName)) {
+                            XposedBridge.log("FL: in whiteList! Dropping register request...")
+                            param.result = false
+                            return@before
+                        }
+                    }
+                }
             }
-        }
 
-        findAllMethods(clazz) {
-            name == "addGnssMeasurementsListener" && isPublic
-        }.hookBefore { param ->
-            val packageName = param.args[2] as String
+        MethodFinder.fromClass(clazz)
+            .filterByName("addGnssMeasurementsListener")
+            .filterPublic()
+            .forEach { method ->
+                method.createHook {
+                    before { param ->
+                        val packageName = param.args[2] as String
 //            XposedBridge.log("FL: in addGnssMeasurementsListener (R)! Caller package name: $packageName")
 
-            if (ConfigGateway.get().inWhitelist(packageName)) {
-                XposedBridge.log("FL: in whiteList! Dropping register request...")
-                param.result = false
-                return@hookBefore
+                        if (ConfigGateway.get().inWhitelist(packageName)) {
+                            XposedBridge.log("FL: in whiteList! Dropping register request...")
+                            param.result = false
+                            return@before
+                        }
+                    }
+                }
             }
-        }
 
-        findAllMethods(clazz) {
-            name == "addGnssNavigationMessageListener" && isPublic
-        }.hookBefore { param ->
-            val packageName = param.args[1] as String
+        MethodFinder.fromClass(clazz)
+            .filterByName("addGnssNavigationMessageListener")
+            .filterPublic()
+            .forEach { method ->
+                method.createHook {
+                    before { param ->
+                        val packageName = param.args[1] as String
 //            XposedBridge.log("FL: in addGnssNavigationMessageListener (R)! Caller package name: $packageName")
 
-            if (ConfigGateway.get().inWhitelist(packageName)) {
-                XposedBridge.log("FL: in whiteList! Dropping register request...")
-                param.result = false
-                return@hookBefore
+                        if (ConfigGateway.get().inWhitelist(packageName)) {
+                            XposedBridge.log("FL: in whiteList! Dropping register request...")
+                            param.result = false
+                            return@before
+                        }
+                    }
+                }
             }
-        }
 
-        findAllMethods(clazz) {
-            name == "addGnssAntennaInfoListener" && isPublic
-        }.hookBefore { param ->
-            val packageName = param.args[1] as String
+        MethodFinder.fromClass(clazz)
+            .filterByName("addGnssAntennaInfoListener")
+            .filterPublic()
+            .forEach { method ->
+                method.createHook {
+                    before { param ->
+                        val packageName = param.args[1] as String
 //            XposedBridge.log("FL: in addGnssAntennaInfoListener (R)! Caller package name: $packageName")
 
-            if (ConfigGateway.get().inWhitelist(packageName)) {
-                XposedBridge.log("FL: in whiteList! Dropping register request...")
-                param.result = false
-                return@hookBefore
+                        if (ConfigGateway.get().inWhitelist(packageName)) {
+                            XposedBridge.log("FL: in whiteList! Dropping register request...")
+                            param.result = false
+                            return@before
+                        }
+                    }
+                }
             }
-        }
     }
 }

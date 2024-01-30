@@ -8,10 +8,8 @@ import android.telephony.CellIdentityLte
 import android.telephony.CellIdentityNr
 import android.telephony.CellInfo
 import androidx.annotation.RequiresApi
-import com.github.kyuubiran.ezxhelper.utils.findAllMethods
-import com.github.kyuubiran.ezxhelper.utils.hookAfter
-import com.github.kyuubiran.ezxhelper.utils.hookBefore
-import com.github.kyuubiran.ezxhelper.utils.isPublic
+import com.github.kyuubiran.ezxhelper.HookFactory.`-Static`.createHook
+import com.github.kyuubiran.ezxhelper.finders.MethodFinder
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import fuck.location.xposed.cellar.identity.Lte
@@ -43,158 +41,200 @@ class MiuiBlurLocationManagerHookerR {
             }
         }
 
-        findAllMethods(clazz) {
-            name == "getBlurryLocation" && isPublic
-        }.hookAfter { param ->
-            val packageName = param.args[2] as String
-            XposedBridge.log("FL: [Shaomi R] in getBlurryLocation! Caller packageName: $packageName")
+        MethodFinder.fromClass(clazz)
+            .filterByName("getBlurryLocation")
+            .filterPublic()
+            .forEach { method ->
+                method.createHook {
+                    after { param ->
+                        val packageName = param.args[2] as String
+                        XposedBridge.log("FL: [Shaomi R] in getBlurryLocation! Caller packageName: $packageName")
 
-            if (ConfigGateway.get().inWhitelist(packageName)) {
-                XposedBridge.log("FL: [Shaomi R] in whitelist! Return custom location")
-                val fakeLocation = ConfigGateway.get().readFakeLocation()
+                        if (ConfigGateway.get().inWhitelist(packageName)) {
+                            XposedBridge.log("FL: [Shaomi R] in whitelist! Return custom location")
+                            val fakeLocation = ConfigGateway.get().readFakeLocation()
 
-                lateinit var location: Location
-                lateinit var originLocation: Location
+                            lateinit var location: Location
+                            lateinit var originLocation: Location
 
-                if (param.result == null) {
-                    location = Location(LocationManager.GPS_PROVIDER)
-                    location.time = System.currentTimeMillis() - (100..10000).random()
-                } else {
-                    originLocation = param.result as Location
-                    location = Location(originLocation.provider)
+                            if (param.result == null) {
+                                location = Location(LocationManager.GPS_PROVIDER)
+                                location.time = System.currentTimeMillis() - (100..10000).random()
+                            } else {
+                                originLocation = param.result as Location
+                                location = Location(originLocation.provider)
 
-                    location.time = originLocation.time
-                    location.accuracy = originLocation.accuracy
-                    location.bearing = originLocation.bearing
-                    location.bearingAccuracyDegrees = originLocation.bearingAccuracyDegrees
-                    location.elapsedRealtimeNanos = originLocation.elapsedRealtimeNanos
-                    location.verticalAccuracyMeters = originLocation.verticalAccuracyMeters
-                }
+                                location.time = originLocation.time
+                                location.accuracy = originLocation.accuracy
+                                location.bearing = originLocation.bearing
+                                location.bearingAccuracyDegrees =
+                                    originLocation.bearingAccuracyDegrees
+                                location.elapsedRealtimeNanos = originLocation.elapsedRealtimeNanos
+                                location.verticalAccuracyMeters =
+                                    originLocation.verticalAccuracyMeters
+                            }
 
-                location.latitude = fakeLocation.x + (Math.random() * fakeLocation.offset - fakeLocation.offset / 2)
-                location.longitude = fakeLocation.y + (Math.random() * fakeLocation.offset - fakeLocation.offset / 2)
-                location.altitude = 0.0
-                location.speed = 0F
-                location.speedAccuracyMetersPerSecond = 0F
+                            location.latitude =
+                                fakeLocation.x + (Math.random() * fakeLocation.offset - fakeLocation.offset / 2)
+                            location.longitude =
+                                fakeLocation.y + (Math.random() * fakeLocation.offset - fakeLocation.offset / 2)
+                            location.altitude = 0.0
+                            location.speed = 0F
+                            location.speedAccuracyMetersPerSecond = 0F
 
-                try {
-                    HiddenApiBypass.invoke(
-                        location.javaClass,
-                        location,
-                        "setIsFromMockProvider",
-                        false
-                    )
-                } catch (e: Exception) {
-                    XposedBridge.log("FL: [Shaomi R] Not possible to mock! $e")
-                }
+                            try {
+                                HiddenApiBypass.invoke(
+                                    location.javaClass,
+                                    location,
+                                    "setIsFromMockProvider",
+                                    false
+                                )
+                            } catch (e: Exception) {
+                                XposedBridge.log("FL: [Shaomi R] Not possible to mock! $e")
+                            }
 
-                XposedBridge.log("FL: [Shaomi R] x: ${location.latitude}, y: ${location.longitude}")
-                param.result = location
-            }
-        }
-
-        findAllMethods(clazz) {
-            name == "getBlurryCellLocation" && isPublic && parameterCount == 1
-        }.hookAfter { param ->
-            try {
-                val packageName = ConfigGateway.get().callerIdentityToPackageName(param.args[0])
-                XposedBridge.log("FL: [Shaomi R] in getBlurryCellLocation! Caller packageName: $packageName")
-
-                if (ConfigGateway.get().inWhitelist(packageName)) {
-                    when (param.result) {
-                        is CellIdentityLte -> {
-                            XposedBridge.log("FL: [Shaomi R] Using LTE Network...")
-                            param.result = Lte().alterCellIdentity(param.result as CellIdentityLte)
-                        }
-                        is CellIdentityNr -> {
-                            XposedBridge.log("FL: [Shaomi R] Using Nr Network...")
-                            param.result = Nr().alterCellIdentity(param.result as CellIdentityNr)
-                        }
-                        else -> {
-                            XposedBridge.log("FL: [Shaomi R] Unsupported network type. Return null as fallback")
-                            param.result = null
+                            XposedBridge.log("FL: [Shaomi R] x: ${location.latitude}, y: ${location.longitude}")
+                            param.result = location
                         }
                     }
                 }
-            } catch (e: Exception) {
-                XposedBridge.log("FL: [Shaomi R] Manually workaround for possibly invalid class...")
             }
-        }
 
-        findAllMethods(clazz) {
-            name == "getBlurryCellInfos" && isPublic && parameterCount == 3
-        }.hookAfter { param ->
-            val packageName = param.args[2] as String
-            XposedBridge.log("FL: [Shaomi R] in getBlurryCellInfos! Caller packageName: $packageName")
+        MethodFinder.fromClass(clazz)
+            .filterByName("getBlurryCellLocation")
+            .filterPublic()
+            .filterByParamCount(1)
+            .forEach { method ->
+                method.createHook {
+                    after { param ->
+                        try {
+                            val packageName =
+                                ConfigGateway.get().callerIdentityToPackageName(param.args[0])
+                            XposedBridge.log("FL: [Shaomi R] in getBlurryCellLocation! Caller packageName: $packageName")
 
-            if (ConfigGateway.get().inWhitelist(packageName)) {
-                XposedBridge.log("FL: [Shaomi R] in whiteList! Return empty CellInfos for testing purpose.")
-                val customAllCellInfo = ArrayList<CellInfo>()
-                param.result = customAllCellInfo
-            }
-        }
+                            if (ConfigGateway.get().inWhitelist(packageName)) {
+                                when (param.result) {
+                                    is CellIdentityLte -> {
+                                        XposedBridge.log("FL: [Shaomi R] Using LTE Network...")
+                                        param.result =
+                                            Lte().alterCellIdentity(param.result as CellIdentityLte)
+                                    }
 
-        findAllMethods(clazz) {
-            name == "blurLastGpsLocation" && isPublic
-        }.hookAfter { param ->
-            val packageName = ConfigGateway.get().callerIdentityToPackageName(param.args[2])
-            XposedBridge.log("FL: [Shaomi R] in blurLastGpsLocation! Caller packageName: $packageName")
+                                    is CellIdentityNr -> {
+                                        XposedBridge.log("FL: [Shaomi R] Using Nr Network...")
+                                        param.result =
+                                            Nr().alterCellIdentity(param.result as CellIdentityNr)
+                                    }
 
-            if (ConfigGateway.get().inWhitelist(packageName)) {
-                XposedBridge.log("FL: [Shaomi R] in whitelist! Return custom location")
-                val fakeLocation = ConfigGateway.get().readFakeLocation()
-
-                lateinit var location: Location
-                lateinit var originLocation: Location
-
-                if (param.result == null) {
-                    location = Location(LocationManager.GPS_PROVIDER)
-                    location.time = System.currentTimeMillis() - (100..10000).random()
-                } else {
-                    originLocation = param.result as Location
-                    location = Location(originLocation.provider)
-
-                    location.time = originLocation.time
-                    location.accuracy = originLocation.accuracy
-                    location.bearing = originLocation.bearing
-                    location.bearingAccuracyDegrees = originLocation.bearingAccuracyDegrees
-                    location.elapsedRealtimeNanos = originLocation.elapsedRealtimeNanos
-                    location.verticalAccuracyMeters = originLocation.verticalAccuracyMeters
+                                    else -> {
+                                        XposedBridge.log("FL: [Shaomi R] Unsupported network type. Return null as fallback")
+                                        param.result = null
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            XposedBridge.log("FL: [Shaomi R] Manually workaround for possibly invalid class...")
+                        }
+                    }
                 }
+            }
 
-                location.latitude = fakeLocation.x + (Math.random() * fakeLocation.offset - fakeLocation.offset / 2)
-                location.longitude = fakeLocation.y + (Math.random() * fakeLocation.offset - fakeLocation.offset / 2)
-                location.altitude = 0.0
-                location.speed = 0F
-                location.speedAccuracyMetersPerSecond = 0F
+        MethodFinder.fromClass(clazz)
+            .filterByName("getBlurryCellInfos")
+            .filterByParamCount(1)
+            .filterPublic()
+            .forEach { method ->
+                method.createHook {
+                    after { param ->
+                        val packageName = param.args[2] as String
+                        XposedBridge.log("FL: [Shaomi R] in getBlurryCellInfos! Caller packageName: $packageName")
 
-                try {
-                    HiddenApiBypass.invoke(
-                        location.javaClass,
-                        location,
-                        "setIsFromMockProvider",
-                        false
-                    )
-                } catch (e: Exception) {
-                    XposedBridge.log("FL: Not possible to mock (R)! $e")
+                        if (ConfigGateway.get().inWhitelist(packageName)) {
+                            XposedBridge.log("FL: [Shaomi R] in whiteList! Return empty CellInfos for testing purpose.")
+                            val customAllCellInfo = ArrayList<CellInfo>()
+                            param.result = customAllCellInfo
+                        }
+                    }
                 }
-
-                XposedBridge.log("FL: x: ${location.latitude}, y: ${location.longitude}")
-                param.result = location
             }
-        }
 
-        findAllMethods(clazz) {
-            name == "handleGpsLocationChangedLocked" && isPublic
-        }.hookBefore { param ->
-            val packageName = ConfigGateway.get().callerIdentityToPackageName(param.args[1])
-            XposedBridge.log("FL: [Shaomi R] in handleGpsLocationChangedLocked! Caller packageName: $packageName")
+        MethodFinder.fromClass(clazz)
+            .filterByName("blurLastGpsLocation")
+            .filterPublic()
+            .forEach { method ->
+                method.createHook {
+                    after { param ->
+                        val packageName =
+                            ConfigGateway.get().callerIdentityToPackageName(param.args[2])
+                        XposedBridge.log("FL: [Shaomi R] in blurLastGpsLocation! Caller packageName: $packageName")
 
-            if (ConfigGateway.get().inWhitelist(packageName)) {
-                XposedBridge.log("FL: [Shaomi R] in whiteList! Dropping update request for testing purpose...")
-                param.result = null
-                return@hookBefore
+                        if (ConfigGateway.get().inWhitelist(packageName)) {
+                            XposedBridge.log("FL: [Shaomi R] in whitelist! Return custom location")
+                            val fakeLocation = ConfigGateway.get().readFakeLocation()
+
+                            lateinit var location: Location
+                            lateinit var originLocation: Location
+
+                            if (param.result == null) {
+                                location = Location(LocationManager.GPS_PROVIDER)
+                                location.time = System.currentTimeMillis() - (100..10000).random()
+                            } else {
+                                originLocation = param.result as Location
+                                location = Location(originLocation.provider)
+
+                                location.time = originLocation.time
+                                location.accuracy = originLocation.accuracy
+                                location.bearing = originLocation.bearing
+                                location.bearingAccuracyDegrees =
+                                    originLocation.bearingAccuracyDegrees
+                                location.elapsedRealtimeNanos = originLocation.elapsedRealtimeNanos
+                                location.verticalAccuracyMeters =
+                                    originLocation.verticalAccuracyMeters
+                            }
+
+                            location.latitude =
+                                fakeLocation.x + (Math.random() * fakeLocation.offset - fakeLocation.offset / 2)
+                            location.longitude =
+                                fakeLocation.y + (Math.random() * fakeLocation.offset - fakeLocation.offset / 2)
+                            location.altitude = 0.0
+                            location.speed = 0F
+                            location.speedAccuracyMetersPerSecond = 0F
+
+                            try {
+                                HiddenApiBypass.invoke(
+                                    location.javaClass,
+                                    location,
+                                    "setIsFromMockProvider",
+                                    false
+                                )
+                            } catch (e: Exception) {
+                                XposedBridge.log("FL: Not possible to mock (R)! $e")
+                            }
+
+                            XposedBridge.log("FL: x: ${location.latitude}, y: ${location.longitude}")
+                            param.result = location
+                        }
+                    }
+                }
             }
-        }
+
+        MethodFinder.fromClass(clazz)
+            .filterByName("handleGpsLocationChangedLocked")
+            .filterPublic()
+            .forEach { method ->
+                method.createHook {
+                    before { param ->
+                        val packageName =
+                            ConfigGateway.get().callerIdentityToPackageName(param.args[1])
+                        XposedBridge.log("FL: [Shaomi R] in handleGpsLocationChangedLocked! Caller packageName: $packageName")
+
+                        if (ConfigGateway.get().inWhitelist(packageName)) {
+                            XposedBridge.log("FL: [Shaomi R] in whiteList! Dropping update request for testing purpose...")
+                            param.result = null
+                            return@before
+                        }
+                    }
+                }
+            }
     }
 }

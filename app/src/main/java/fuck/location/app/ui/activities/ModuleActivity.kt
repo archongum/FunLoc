@@ -16,7 +16,7 @@ import fuck.location.databinding.ActivitySelectAppsBinding
 import android.widget.ImageView
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.SearchView
-import com.github.kyuubiran.ezxhelper.utils.runOnMainThread
+import com.github.kyuubiran.ezxhelper.misc.AndroidUtils.runOnMainThread
 import com.idanatz.oneadapter.external.event_hooks.ClickEventHook
 import com.idanatz.oneadapter.external.modules.EmptinessModule
 import com.scwang.smart.refresh.layout.api.RefreshLayout

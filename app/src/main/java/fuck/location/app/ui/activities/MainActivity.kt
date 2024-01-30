@@ -86,6 +86,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             val previousTACInput = previousFakeLocation.tac
             val previousEarfCNInput = previousFakeLocation.earfcn
             val previousBandwidthInput = previousFakeLocation.bandwidth
+            val previousMnc = previousFakeLocation.mnc
 
             val numberFormat = NumberFormat.getNumberInstance()
             numberFormat.isGroupingUsed = false
@@ -99,6 +100,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             findViewById<EditText>(R.id.custom_view_fl_tac).setText(previousTACInput.toString())
             findViewById<EditText>(R.id.custom_view_fl_earfcn).setText(previousEarfCNInput.toString())
             findViewById<EditText>(R.id.custom_view_fl_bandwidth).setText(previousBandwidthInput.toString())
+            findViewById<EditText>(R.id.custom_view_fl_mnc).setText(previousMnc.toString())
 
             positiveButton(R.string.custom_location_dialog_save) { dialog ->
                 val yInput: EditText = dialog.getCustomView()
@@ -117,6 +119,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                     .findViewById(R.id.custom_view_fl_earfcn)
                 val bandwidthInput: EditText = dialog.getCustomView()
                     .findViewById(R.id.custom_view_fl_bandwidth)
+                val mncInput: EditText = dialog.getCustomView()
+                    .findViewById(R.id.custom_view_fl_mnc)
 
                 xInput.setText(xInput.text.takeIf { xInput.text.isNotEmpty() } ?: "0.0")
                 yInput.setText(yInput.text.takeIf { yInput.text.isNotEmpty() } ?: "0.0")
@@ -126,6 +130,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 tacInput.setText(tacInput.text.takeIf { tacInput.text.isNotEmpty() } ?: "0")
                 earfcnInput.setText(earfcnInput.text.takeIf { earfcnInput.text.isNotEmpty() } ?: "0")
                 bandwidthInput.setText(bandwidthInput.text.takeIf { bandwidthInput.text.isNotEmpty() } ?: "0")
+                mncInput.setText(mncInput.text.takeIf { mncInput.text.isNotEmpty() } ?: "11")
 
                 ConfigGateway.get().writeFakeLocation(
                     xInput.text.toString().toDouble(),
@@ -135,7 +140,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                     pciInput.text.toString().toInt(),
                     tacInput.text.toString().toInt(),
                     earfcnInput.text.toString().toInt(),
-                    bandwidthInput.text.toString().toInt()
+                    bandwidthInput.text.toString().toInt(),
+                    mncInput.text.toString()
                 )
             }
             negativeButton(R.string.custom_location_dialog_notsave)
