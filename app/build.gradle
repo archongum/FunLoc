@@ -56,7 +56,7 @@ dependencies {
     implementation 'com.drakeet.about:about:2.5.2'
     implementation 'com.drakeet.multitype:multitype:4.3.0'
 
-    implementation 'com.github.idanatz:OneAdapter:2.1.1'
+    implementation 'com.github.idanatz:OneAdapter:2.1.6'
     implementation 'com.scwang.smart:refresh-layout-kernel:2.0.3'
     implementation 'com.scwang.smart:refresh-header-material:2.0.3'
 
