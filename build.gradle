@@ -4,7 +4,7 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        maven { url "https://archiva.interlocsolutions.com/archiva/repository/internal" }
+        maven { url "https://api.xposed.info/" }
     }
 
     dependencies {
